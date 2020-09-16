@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+#
+# The script is provided as is under terms & conditions of GNU General Public License V 3.0 
+#
+# Prints top level packages installed on Ubuntu/Debian Linux 
+# (C) Yuri Ingultsov. <yuri@softlab.in.ua>
+#
+# History:
+#   2020-09-16. Initially created
+#
+
+class Item:
+    def __init__(self, package):
+        self.package = package
+        self.references = 0
+        self.processed = False
+
+class References:
+    references = []
+
+def process_dependensies(installed_packages, pkgItem):
+    if not pkgItem.processed:
+        pkgItem.processed = True
+        dependencies = pkgItem.package.installed.dependencies
+        for dependency in dependencies:
+            for base_dependency in dependency.or_dependencies:
+                #print(pkgItem.package.name, "Depends: ", base_dependency.name)
+                if base_dependency.name in installed_packages.keys():
+                    pi = installed_packages[base_dependency.name]
+                    pi.references +=1
+                    if not pi.processed:
+                       process_dependensies(installed_packages, pi)
+                #else:
+                #    print(base_dependency.name, "-- NOT INSTALLED")
+
+import apt
+cache = apt.Cache()
+installed_packages = {pkg.name: Item(pkg) for pkg in cache if pkg.is_installed}
+#
+# missing packages. the packages is referenced by installed packages but actualy
+# is not installed in the system
+missing_packages = {}
+#
+#
+for name, pkgItem in installed_packages.items():
+    process_dependensies(installed_packages, pkgItem)
+
+for name, pkgItem in installed_packages.items():
+    if pkgItem.references == 0:
+        print(pkgItem.package.name, " - ", pkgItem.package.installed.summary)
+        dependencies = pkgItem.package.installed.dependencies
+        for dependency in dependencies:
+            for base_dependency in dependency.or_dependencies:
+                status = ""
+                if not base_dependency.name in installed_packages.keys():
+                    status = " - MISSING"
+                    if not base_dependency.name in missing_packages.keys():
+                        missing_packages[base_dependency.name] = References()
+                    missing_packages[base_dependency.name].references.append(pkgItem.package)
+                print("    ", base_dependency.rawtype, base_dependency.name, base_dependency.relation, base_dependency.version, status)
+
