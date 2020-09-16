@@ -12,9 +12,11 @@
 class Item:
     def __init__(self, package):
         self.package = package
-        self.references = 0
-        self.processed = False
+        self.references = 0     # the number of packages depending on this packages
+        self.processed = False  # used to break loops 
 
+#
+# Still should bne imnplementted  ;) 
 class References:
     references = []
 
@@ -36,15 +38,16 @@ def process_dependensies(installed_packages, pkgItem):
 import apt
 cache = apt.Cache()
 installed_packages = {pkg.name: Item(pkg) for pkg in cache if pkg.is_installed}
-#
+
 # missing packages. the packages is referenced by installed packages but actualy
 # is not installed in the system
 missing_packages = {}
-#
-#
+
+# build....
 for name, pkgItem in installed_packages.items():
     process_dependensies(installed_packages, pkgItem)
 
+# print...    
 for name, pkgItem in installed_packages.items():
     if pkgItem.references == 0:
         print(pkgItem.package.name, " - ", pkgItem.package.installed.summary)
